@@ -8,14 +8,20 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1D4ED8"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#1D4ED8"
+      },
+      "package": "com.myapp.storagemanagement"
     },
     "web": {
       "bundler": "metro",
@@ -25,12 +31,10 @@
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
+        "expo-image-picker",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "photosPermission": "The app accesses your photos to let you share them with your friends.",
+          "cameraPermission": "The app accesses your camera to let you share them with your friends."
         }
       ]
     ],

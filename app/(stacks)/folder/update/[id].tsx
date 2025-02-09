@@ -1,3 +1,4 @@
+import {useState, useEffect} from "react";
 import {
   View,
   Text,
@@ -10,13 +11,13 @@ import {
   TouchableOpacity,
   TextInput,
 } from "react-native";
-import {useState, useEffect} from "react";
 import {useLocalSearchParams} from "expo-router";
-import useAppwrite from "@/lib/useAppwrite";
-import {getFolder, updateFolder} from "@/lib/appwrite";
 import {useColorScheme} from "nativewind";
-import FormField from "@/components/form-field";
 import {FontAwesome} from "@expo/vector-icons";
+
+import {getFolder, updateFolder} from "@/lib/appwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
+import FormField from "@/components/form-field";
 import CustomButton from "@/components/custom-button";
 
 interface FolderParams {
@@ -36,16 +37,17 @@ const UpdateFolderScreen = () => {
 
   const {colorScheme} = useColorScheme();
 
-  const {data: folder, refetch} = useAppwrite(() =>
-    getFolder({id: id as string})
-  );
-
-  const typedFolder = folder as unknown as FolderParams;
+  const {data: folder, refetch} = useAppwrite({
+    fn: getFolder,
+    params: {id: id as string},
+  });
 
   useEffect(() => {
-    setName(typedFolder.name);
-    setTags(typedFolder.tags);
-  }, [typedFolder]);
+    if (!folder) return;
+
+    setName(folder.name);
+    setTags(folder.tags);
+  }, [folder]);
 
   const addTag = () => {
     if (text.trim() !== "") {
@@ -89,7 +91,7 @@ const UpdateFolderScreen = () => {
     try {
       await updateFolder({id: id as string, name, tags});
 
-      await refetch();
+      await refetch({id: id as string});
 
       ToastAndroid.showWithGravityAndOffset(
         "Folder updated successfully.",

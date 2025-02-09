@@ -4,16 +4,14 @@ import SelectDropdown from "react-native-select-dropdown";
 import {FontAwesome} from "@expo/vector-icons";
 
 import {getCurrentUser, updateUser} from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import FormField from "@/components/form-field";
 import CustomButton from "@/components/custom-button";
 
 const genderData = [{title: "male"}, {title: "female"}];
 
 const ProfileUpdateDetailsScreen = () => {
-  const {data: user, refetch} = useAppwrite(() => getCurrentUser());
-
-  const typedUser = user as unknown as UserDetailsProps;
+  const {data: user, refetch} = useAppwrite({fn: getCurrentUser});
 
   const [form, setForm] = useState({
     name: "",
@@ -25,19 +23,20 @@ const ProfileUpdateDetailsScreen = () => {
 
   useEffect(() => {
     setForm({
-      name: typedUser.name || "",
-      username: typedUser.username,
-      gender: typedUser.gender || "",
-      country: typedUser.country || "",
+      name: user ? user.name : "",
+      username: user ? user.username : "",
+      gender: user ? user.gender : "",
+      country: user ? user.country : "",
     });
-  }, [typedUser]);
+  }, [user]);
 
   const handleSubmit = async () => {
     if (
       form.name === "" ||
       form.username === "" ||
       form.gender === "" ||
-      form.country === ""
+      form.country === "" ||
+      !user
     ) {
       ToastAndroid.showWithGravityAndOffset(
         "Please fill all the fields!",
@@ -53,14 +52,14 @@ const ProfileUpdateDetailsScreen = () => {
 
     try {
       await updateUser({
-        userId: typedUser.$id,
+        userId: user.$id,
         name: form.name,
         username: form.username,
         gender: form.gender,
         country: form.country,
       });
 
-      await refetch();
+      await refetch({});
 
       ToastAndroid.showWithGravityAndOffset(
         "Profile details updated successfully!",

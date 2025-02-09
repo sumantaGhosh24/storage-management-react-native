@@ -13,11 +13,11 @@ import {useColorScheme} from "nativewind";
 
 import {getFiles} from "@/lib/appwrite";
 import {getFileTypesParams} from "@/lib/utils";
-import useAppwrite from "@/lib/useAppwrite";
 import EmptyState from "@/components/empty-state";
 import FileThumbnail from "@/components/file-thumbnail";
 import FormField from "@/components/form-field";
 import IconButton from "@/components/icon-button";
+import {useAppwrite} from "@/lib/useAppwrite";
 
 const LIMIT = 5;
 
@@ -25,28 +25,6 @@ const sortData = [
   {title: "Created At(desc)", value: "$createdAt-desc"},
   {title: "Created At(asc)", value: "$createdAt-asc"},
 ];
-
-interface MediaParams {
-  files: {
-    $id: string;
-    name: string;
-    extension: string;
-    size: number;
-    type: string;
-    url: string;
-    $createdAt: string;
-    $updatedAt: string;
-    folder: {
-      $id: string;
-      name: string;
-      tags: string[];
-      $createdAt: string;
-      $updatedAt: string;
-    } | null;
-  }[];
-  total: number;
-  hasMore: boolean;
-}
 
 const MediaFileScreen = () => {
   const {colorScheme} = useColorScheme();
@@ -59,21 +37,28 @@ const MediaFileScreen = () => {
 
   const types = getFileTypesParams("media");
 
-  const {data: media, refetch} = useAppwrite(() =>
-    getFiles({
+  const {data: media, refetch} = useAppwrite({
+    fn: getFiles,
+    params: {
       types,
       limit: LIMIT,
       page: filter.page,
       sort: filter.sort,
       searchText: filter.search,
-    })
-  );
-
-  const typedMedia = media as unknown as MediaParams;
+      root: false,
+    },
+  });
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      await refetch();
+      await refetch({
+        types,
+        limit: LIMIT,
+        page: filter.page,
+        sort: filter.sort,
+        searchText: filter.search,
+        root: false,
+      });
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [filter]);
@@ -101,7 +86,18 @@ const MediaFileScreen = () => {
             <Text className="text-2xl font-bold my-5 dark:text-white">
               Media
             </Text>
-            <TouchableOpacity onPress={() => refetch()}>
+            <TouchableOpacity
+              onPress={() =>
+                refetch({
+                  types,
+                  limit: LIMIT,
+                  page: filter.page,
+                  sort: filter.sort,
+                  searchText: filter.search,
+                  root: false,
+                })
+              }
+            >
               <FontAwesome
                 name="refresh"
                 size={24}
@@ -157,9 +153,9 @@ const MediaFileScreen = () => {
           </View>
           <View>
             <View>
-              {typedMedia.total > 0 ? (
-                typedMedia?.files.map((file) => (
-                  <FileThumbnail file={file} key={file.$id} />
+              {media && media.total > 0 ? (
+                media?.files.map((file) => (
+                  <FileThumbnail file={file as any} key={file.$id} />
                 ))
               ) : (
                 <EmptyState
@@ -170,9 +166,9 @@ const MediaFileScreen = () => {
                 />
               )}
             </View>
-            {typedMedia.total > 0 && (
+            {media && media.total > 0 && (
               <View className="flex flex-row items-center gap-3 my-5 flex-wrap">
-                {[...Array(Math.ceil(typedMedia.total / LIMIT))]
+                {[...Array(Math.ceil(media.total / LIMIT))]
                   .fill(0)
                   .map((c, i) => (
                     <TouchableOpacity

@@ -11,28 +11,10 @@ import {FontAwesome} from "@expo/vector-icons";
 import {useColorScheme} from "nativewind";
 
 import {deleteFolder, getFolder} from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import EmptyState from "@/components/empty-state";
 import FileThumbnail from "@/components/file-thumbnail";
 import IconButton from "@/components/icon-button";
-
-interface FolderParams {
-  $id: string;
-  name: string;
-  tags: string[];
-  $createdAt: string;
-  $updatedAt: string;
-  files: {
-    $id: string;
-    name: string;
-    extension: string;
-    size: number;
-    type: string;
-    url: string;
-    $createdAt: string;
-    $updatedAt: string;
-  }[];
-}
 
 const FolderScreen = () => {
   const {id} = useLocalSearchParams();
@@ -46,9 +28,7 @@ const FolderScreen = () => {
     data: folder,
     loading: folderLoading,
     refetch,
-  } = useAppwrite(() => getFolder({id: id as string}));
-
-  const typedFolder = folder as unknown as FolderParams;
+  } = useAppwrite({fn: getFolder, params: {id: id as string}});
 
   const handleDelete = async () => {
     setLoading(true);
@@ -80,7 +60,7 @@ const FolderScreen = () => {
 
   return (
     <ScrollView>
-      <Stack.Screen options={{title: typedFolder.name}} />
+      <Stack.Screen options={{title: folder && folder.name}} />
       {!folderLoading && (
         <>
           <View className="flex flex-row items-start justify-end gap-5 p-5 bg-blue-600">
@@ -110,8 +90,9 @@ const FolderScreen = () => {
                   <Text className="text-2xl font-bold my-5 dark:text-white">
                     Files
                   </Text>
-                  {typeof typedFolder.tags !== "undefined" &&
-                    typedFolder.tags.map((tag) => (
+                  {folder &&
+                    typeof folder.tags !== "undefined" &&
+                    folder.tags.map((tag: string) => (
                       <View
                         key={tag}
                         className="bg-gray-200 dark:bg-gray-700 p-1.5 rounded-lg"
@@ -122,7 +103,7 @@ const FolderScreen = () => {
                       </View>
                     ))}
                 </View>
-                <TouchableOpacity onPress={() => refetch()}>
+                <TouchableOpacity onPress={() => refetch({id: id as string})}>
                   <FontAwesome
                     name="refresh"
                     size={24}
@@ -132,18 +113,19 @@ const FolderScreen = () => {
               </View>
               <View>
                 <View>
-                  {typeof typedFolder.files !== "undefined" &&
-                  typedFolder.files.length > 0 ? (
-                    typedFolder?.files.map((file) => (
+                  {folder &&
+                  typeof folder.files !== "undefined" &&
+                  folder.files.length > 0 ? (
+                    folder?.files.map((file: any) => (
                       <FileThumbnail
                         file={{
                           ...file,
                           folder: {
-                            $id: typedFolder.$id,
-                            name: typedFolder.name,
-                            tags: typedFolder.tags,
-                            $createdAt: typedFolder.$createdAt,
-                            $updatedAt: typedFolder.$updatedAt,
+                            $id: folder.$id,
+                            name: folder.name,
+                            tags: folder.tags,
+                            $createdAt: folder.$createdAt,
+                            $updatedAt: folder.$updatedAt,
                           },
                         }}
                         key={file.$id}

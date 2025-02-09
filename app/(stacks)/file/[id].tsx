@@ -12,29 +12,10 @@ import {FontAwesome} from "@expo/vector-icons";
 import {useColorScheme} from "nativewind";
 
 import {deleteFile, getFile} from "@/lib/appwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import {constructFileUrl} from "@/lib/utils";
-import useAppwrite from "@/lib/useAppwrite";
 import FileThumbnail from "@/components/file-thumbnail";
 import IconButton from "@/components/icon-button";
-
-interface FileParams {
-  $id: string;
-  name: string;
-  extension: string;
-  size: number;
-  type: string;
-  url: string;
-  fileId: string;
-  $createdAt: string;
-  $updatedAt: string;
-  folder: {
-    $id: string;
-    name: string;
-    tags: string[];
-    $createdAt: string;
-    $updatedAt: string;
-  };
-}
 
 const FileScreen = () => {
   const {id} = useLocalSearchParams();
@@ -44,15 +25,18 @@ const FileScreen = () => {
 
   const {colorScheme} = useColorScheme();
 
-  const {data: file, refetch} = useAppwrite(() => getFile({id: id as string}));
-
-  const typedFile = file as unknown as FileParams;
+  const {data: file, refetch} = useAppwrite({
+    fn: getFile,
+    params: {id: id as string},
+  });
 
   const handleDelete = async () => {
     setLoading(true);
 
+    if (!file) return;
+
     try {
-      await deleteFile({id: id as string, fileId: typedFile.fileId});
+      await deleteFile({id: id as string, fileId: file.fileId});
 
       ToastAndroid.showWithGravityAndOffset(
         "File deleted successfully!",
@@ -77,10 +61,12 @@ const FileScreen = () => {
   };
 
   const handleShare = async () => {
+    if (!file) return;
+
     const options = {
-      title: `Share File ${typedFile.name}`,
-      message: constructFileUrl(typedFile.fileId),
-      url: constructFileUrl(typedFile.fileId),
+      title: `Share File ${file.name}`,
+      message: constructFileUrl(file.fileId),
+      url: constructFileUrl(file.fileId),
     };
 
     try {
@@ -98,7 +84,7 @@ const FileScreen = () => {
 
   return (
     <ScrollView>
-      <Stack.Screen options={{title: typedFile.name}} />
+      <Stack.Screen options={{title: file && file.name}} />
       <View className="flex flex-row items-start justify-end gap-5 p-5 bg-blue-600">
         <IconButton
           icon={<FontAwesome name="pencil" size={24} color="white" />}
@@ -127,7 +113,7 @@ const FileScreen = () => {
                 File
               </Text>
             </View>
-            <TouchableOpacity onPress={() => refetch()}>
+            <TouchableOpacity onPress={() => refetch({id: id as string})}>
               <FontAwesome
                 name="refresh"
                 size={24}
@@ -135,9 +121,11 @@ const FileScreen = () => {
               />
             </TouchableOpacity>
           </View>
-          <View>
-            <FileThumbnail file={typedFile} key={typedFile.$id} />
-          </View>
+          {file && (
+            <View>
+              <FileThumbnail file={file as any} key={file.$id} />
+            </View>
+          )}
         </View>
       </View>
     </ScrollView>

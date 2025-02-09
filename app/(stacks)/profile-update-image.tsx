@@ -11,13 +11,11 @@ import * as ImagePicker from "expo-image-picker";
 import {FontAwesome5} from "@expo/vector-icons";
 
 import {getCurrentUser, updateUserImage} from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import CustomButton from "@/components/custom-button";
 
 const ProfileUpdateImageScreen = () => {
-  const {data: user, refetch} = useAppwrite(() => getCurrentUser());
-
-  const typedUser = user as unknown as UserDetailsProps;
+  const {data: user, refetch} = useAppwrite({fn: getCurrentUser});
 
   const [uploading, setUploading] = useState(false);
   const [avatar, setAvatar] = useState<any>();
@@ -57,7 +55,7 @@ const ProfileUpdateImageScreen = () => {
   };
 
   const handleSubmit = async () => {
-    if (!avatar)
+    if (!avatar || !user)
       return ToastAndroid.showWithGravityAndOffset(
         "First select an image",
         ToastAndroid.LONG,
@@ -69,17 +67,17 @@ const ProfileUpdateImageScreen = () => {
     setUploading(true);
 
     try {
-      if (typedUser.avatarId) {
+      if (user.avatarId) {
         await updateUserImage({
-          userId: typedUser.$id,
+          userId: user.$id,
           avatar,
-          avatarId: typedUser.avatarId,
+          avatarId: user.avatarId,
         });
       } else {
-        await updateUserImage({userId: typedUser.$id, avatar});
+        await updateUserImage({userId: user.$id, avatar});
       }
 
-      await refetch();
+      await refetch({});
 
       ToastAndroid.showWithGravityAndOffset(
         "Profile image updated successfully!",
@@ -109,9 +107,9 @@ const ProfileUpdateImageScreen = () => {
       <Text className="text-2xl font-bold my-5 text-black dark:text-white">
         Profile Update User Image
       </Text>
-      {typedUser.avatar && (
+      {user && user.avatar && (
         <Image
-          source={{uri: typedUser.avatar}}
+          source={{uri: user.avatar}}
           alt="avatar"
           className="h-48 w-full rounded"
         />

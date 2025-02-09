@@ -3,15 +3,9 @@ import {View, Text, ToastAndroid, ScrollView} from "react-native";
 import {useLocalSearchParams} from "expo-router";
 
 import {getFile, updateFile} from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import CustomButton from "@/components/custom-button";
 import FormField from "@/components/form-field";
-
-interface FileParams {
-  $id: string;
-  name: string;
-  extension: string;
-}
 
 const FileUpdateScreen = () => {
   const {id} = useLocalSearchParams();
@@ -19,16 +13,19 @@ const FileUpdateScreen = () => {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const {data: file, refetch} = useAppwrite(() => getFile({id: id as string}));
-
-  const typedFile = file as unknown as FileParams;
+  const {data: file, refetch} = useAppwrite({
+    fn: getFile,
+    params: {id: id as string},
+  });
 
   useEffect(() => {
-    setName(typedFile.name.split(".")[0]);
-  }, [typedFile]);
+    if (!file) return;
+
+    setName(file.name.split(".")[0]);
+  }, [file]);
 
   const handleSubmit = async () => {
-    if (name === "") {
+    if (name === "" || !file) {
       return ToastAndroid.showWithGravityAndOffset(
         "Fill all fields!",
         ToastAndroid.LONG,
@@ -44,10 +41,10 @@ const FileUpdateScreen = () => {
       await updateFile({
         id: id as string,
         name,
-        extension: typedFile.extension,
+        extension: file.extension,
       });
 
-      await refetch();
+      await refetch({id: id as string});
 
       ToastAndroid.showWithGravityAndOffset(
         "File updated successfully.",

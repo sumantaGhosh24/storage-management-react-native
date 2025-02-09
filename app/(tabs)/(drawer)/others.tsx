@@ -12,8 +12,8 @@ import {FontAwesome} from "@expo/vector-icons";
 import {useColorScheme} from "nativewind";
 
 import {getFiles} from "@/lib/appwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import {getFileTypesParams} from "@/lib/utils";
-import useAppwrite from "@/lib/useAppwrite";
 import EmptyState from "@/components/empty-state";
 import FileThumbnail from "@/components/file-thumbnail";
 import FormField from "@/components/form-field";
@@ -26,28 +26,6 @@ const sortData = [
   {title: "Created At(asc)", value: "$createdAt-asc"},
 ];
 
-interface OthersParams {
-  files: {
-    $id: string;
-    name: string;
-    extension: string;
-    size: number;
-    type: string;
-    url: string;
-    $createdAt: string;
-    $updatedAt: string;
-    folder: {
-      $id: string;
-      name: string;
-      tags: string[];
-      $createdAt: string;
-      $updatedAt: string;
-    } | null;
-  }[];
-  total: number;
-  hasMore: boolean;
-}
-
 const OthersFileScreen = () => {
   const {colorScheme} = useColorScheme();
 
@@ -59,21 +37,28 @@ const OthersFileScreen = () => {
 
   const types = getFileTypesParams("others");
 
-  const {data: others, refetch} = useAppwrite(() =>
-    getFiles({
+  const {data: others, refetch} = useAppwrite({
+    fn: getFiles,
+    params: {
       types,
       limit: LIMIT,
       page: filter.page,
       sort: filter.sort,
       searchText: filter.search,
-    })
-  );
-
-  const typedOthers = others as unknown as OthersParams;
+      root: false,
+    },
+  });
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      await refetch();
+      await refetch({
+        types,
+        limit: LIMIT,
+        page: filter.page,
+        sort: filter.sort,
+        searchText: filter.search,
+        root: false,
+      });
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [filter]);
@@ -101,7 +86,18 @@ const OthersFileScreen = () => {
             <Text className="text-2xl font-bold my-5 dark:text-white">
               Others Files
             </Text>
-            <TouchableOpacity onPress={() => refetch()}>
+            <TouchableOpacity
+              onPress={() =>
+                refetch({
+                  types,
+                  limit: LIMIT,
+                  page: filter.page,
+                  sort: filter.sort,
+                  searchText: filter.search,
+                  root: false,
+                })
+              }
+            >
               <FontAwesome
                 name="refresh"
                 size={24}
@@ -157,9 +153,9 @@ const OthersFileScreen = () => {
           </View>
           <View>
             <View>
-              {typedOthers.total > 0 ? (
-                typedOthers?.files.map((file) => (
-                  <FileThumbnail file={file} key={file.$id} />
+              {others && others.total > 0 ? (
+                others?.files.map((file) => (
+                  <FileThumbnail file={file as any} key={file.$id} />
                 ))
               ) : (
                 <EmptyState
@@ -170,9 +166,9 @@ const OthersFileScreen = () => {
                 />
               )}
             </View>
-            {typedOthers.total > 0 && (
+            {others && others.total > 0 && (
               <View className="flex flex-row items-center gap-3 my-5 flex-wrap">
-                {[...Array(Math.ceil(typedOthers.total / LIMIT))]
+                {[...Array(Math.ceil(others.total / LIMIT))]
                   .fill(0)
                   .map((c, i) => (
                     <TouchableOpacity

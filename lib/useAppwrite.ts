@@ -1,36 +1,61 @@
-import {useState, useEffect} from "react";
-import {ToastAndroid} from "react-native";
+import {Alert} from "react-native";
+import {useEffect, useState, useCallback} from "react";
 
-// TODO: using generics add dynamic type in hook
-const useAppwrite = (fn: any) => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+interface UseAppwriteOptions<
+  T,
+  P extends Record<string, string | number | boolean | string[]>
+> {
+  fn: (params: P) => Promise<T>;
+  params?: P;
+  skip?: boolean;
+}
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await fn();
-      setData(res);
-    } catch (error: any) {
-      ToastAndroid.showWithGravityAndOffset(
-        error.message,
-        ToastAndroid.LONG,
-        ToastAndroid.BOTTOM,
-        25,
-        50
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+interface UseAppwriteReturn<T, P> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refetch: (newParams: P) => Promise<void>;
+}
+
+export const useAppwrite = <
+  T,
+  P extends Record<string, string | number | boolean | string[]>
+>({
+  fn,
+  params = {} as P,
+  skip = false,
+}: UseAppwriteOptions<T, P>): UseAppwriteReturn<T, P> => {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(!skip);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(
+    async (fetchParams: P) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await fn(fetchParams);
+        setData(result);
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(errorMessage);
+        Alert.alert("Error", errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fn]
+  );
 
   useEffect(() => {
-    fetchData();
+    if (!skip) {
+      fetchData(params);
+    }
   }, []);
 
-  const refetch = () => fetchData();
+  const refetch = async (newParams: P) => await fetchData(newParams);
 
-  return {data, loading, refetch};
+  return {data, loading, error, refetch};
 };
-
-export default useAppwrite;

@@ -10,8 +10,8 @@ import {Link, router} from "expo-router";
 import {FontAwesome} from "@expo/vector-icons";
 import {useColorScheme} from "nativewind";
 
-import useAppwrite from "@/lib/useAppwrite";
 import {getFiles, getFolders, getTotalSpaceUsed} from "@/lib/appwrite";
+import {useAppwrite} from "@/lib/useAppwrite";
 import {
   calculatePercentage,
   convertFileSize,
@@ -27,43 +27,6 @@ import FileDocumentLightIcon from "@/assets/images/icons/file-document-light";
 import FileImageLightIcon from "@/assets/images/icons/file-image-light";
 import FileOtherLightIcon from "@/assets/images/icons/file-other-light";
 import FileVideoLightIcon from "@/assets/images/icons/file-video-light";
-
-interface TotalSpacePrams {
-  all: number;
-  audio: {latestDate: string; size: number};
-  document: {latestDate: string; size: number};
-  image: {latestDate: string; size: number};
-  video: {latestDate: string; size: number};
-  other: {latestDate: string; size: number};
-  used: number;
-}
-
-interface FolderParams {
-  folders: {
-    $id: string;
-    name: string;
-    tags: string[];
-    files: any[];
-    $createdAt: string;
-  }[];
-  total: number;
-  hasMore: boolean;
-}
-
-interface FileParams {
-  files: {
-    $id: string;
-    name: string;
-    url: string;
-    size: number;
-    type: string;
-    extension: string;
-    $createdAt: string;
-    $updatedAt: string;
-  }[];
-  total: number;
-  hasMore: boolean;
-}
 
 const LIMIT = 5;
 
@@ -139,34 +102,39 @@ const HomeScreen = () => {
 
   const [page, setPage] = useState(1);
 
-  const {data: files, refetch} = useAppwrite(() =>
-    getFiles({
+  const {data: files, refetch} = useAppwrite({
+    fn: getFiles,
+    params: {
       limit: LIMIT,
       page: filter.page,
       types: filter.types,
       root: true,
       searchText: filter.search,
       sort: filter.sort,
-    })
-  );
-  const {data: folders, refetch: refetchFolders} = useAppwrite(() =>
-    getFolders({limit: LIMIT, page})
-  );
+    },
+  });
+
+  const {data: folders, refetch: refetchFolders} = useAppwrite({
+    fn: getFolders,
+    params: {limit: LIMIT, page},
+  });
+
   const {
     data: totalSpace,
     loading,
     refetch: refetchTotalSpace,
-  } = useAppwrite(() => getTotalSpaceUsed());
-
-  const typedFolders = folders as unknown as FolderParams;
-
-  const typedFiles = files as unknown as FileParams;
-
-  const typedTotalSpace = totalSpace as unknown as TotalSpacePrams;
+  } = useAppwrite({fn: getTotalSpaceUsed});
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      await refetch();
+      await refetch({
+        limit: LIMIT,
+        page,
+        types: filter.types,
+        root: true,
+        searchText: filter.search,
+        sort: filter.sort,
+      });
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [filter]);
@@ -194,7 +162,9 @@ const HomeScreen = () => {
             <Text className="text-2xl font-bold my-5 dark:text-white">
               Folders
             </Text>
-            <TouchableOpacity onPress={() => refetchFolders()}>
+            <TouchableOpacity
+              onPress={() => refetchFolders({limit: LIMIT, page})}
+            >
               <FontAwesome
                 name="refresh"
                 size={24}
@@ -204,9 +174,9 @@ const HomeScreen = () => {
           </View>
           <View>
             <View>
-              {typedFolders.total > 0 ? (
-                typedFolders?.folders.map((folder) => (
-                  <FolderThumbnail folder={folder} key={folder.$id} />
+              {folders && folders.total > 0 ? (
+                folders?.folders.map((folder) => (
+                  <FolderThumbnail folder={folder as any} key={folder.$id} />
                 ))
               ) : (
                 <EmptyState
@@ -217,9 +187,9 @@ const HomeScreen = () => {
                 />
               )}
             </View>
-            {typedFolders.total > 0 && (
+            {folders && folders.total > 0 && (
               <View className="flex flex-row items-center gap-3 my-5 flex-wrap">
-                {[...Array(Math.ceil(typedFolders.total / LIMIT))]
+                {[...Array(Math.ceil(folders.total / LIMIT))]
                   .fill(0)
                   .map((c, i) => (
                     <TouchableOpacity
@@ -245,7 +215,18 @@ const HomeScreen = () => {
             <Text className="text-2xl font-bold my-5 dark:text-white">
               Files
             </Text>
-            <TouchableOpacity onPress={() => refetch()}>
+            <TouchableOpacity
+              onPress={() =>
+                refetch({
+                  limit: LIMIT,
+                  page: filter.page,
+                  types: filter.types,
+                  root: true,
+                  searchText: filter.search,
+                  sort: filter.sort,
+                })
+              }
+            >
               <FontAwesome
                 name="refresh"
                 size={24}
@@ -336,10 +317,10 @@ const HomeScreen = () => {
           </View>
           <View>
             <View>
-              {typedFiles.total > 0 ? (
-                typedFiles?.files.map((file) => (
+              {files && files.total > 0 ? (
+                files?.files.map((file) => (
                   <Thumbnail
-                    file={{...file, mimeType: file.type, uri: file.url}}
+                    file={{...file, mimeType: file.type, uri: file.url} as any}
                     key={file.$id}
                   />
                 ))
@@ -352,9 +333,9 @@ const HomeScreen = () => {
                 />
               )}
             </View>
-            {typedFiles.total > 0 && (
+            {files && files.total > 0 && (
               <View className="flex flex-row items-center gap-3 my-5 flex-wrap">
-                {[...Array(Math.ceil(typedFiles.total / LIMIT))]
+                {[...Array(Math.ceil(files.total / LIMIT))]
                   .fill(0)
                   .map((c, i) => (
                     <TouchableOpacity
@@ -379,7 +360,7 @@ const HomeScreen = () => {
           <Text className="text-2xl font-bold my-5 dark:text-white">
             Statistic
           </Text>
-          <TouchableOpacity onPress={() => refetchTotalSpace()}>
+          <TouchableOpacity onPress={() => refetchTotalSpace({})}>
             <FontAwesome
               name="refresh"
               size={24}
@@ -387,17 +368,17 @@ const HomeScreen = () => {
             />
           </TouchableOpacity>
         </View>
-        {!loading && (
+        {!loading && totalSpace && (
           <View className="bg-gray-200 dark:bg-gray-700 p-3 rounded my-3">
             <Text className="text-xl font-bold dark:text-white mb-3">
-              Total Used: {calculatePercentage(typedTotalSpace.used)}%
+              Total Used: {calculatePercentage(totalSpace.used)}%
             </Text>
             <Text className="text-xl font-bold dark:text-white">
-              Total Size: {convertFileSize(typedTotalSpace.used)}
+              Total Size: {convertFileSize(totalSpace.used)}
             </Text>
           </View>
         )}
-        {!loading && (
+        {!loading && totalSpace && (
           <View>
             <Link
               href="/documents"
@@ -407,14 +388,14 @@ const HomeScreen = () => {
                 <View className="flex justify-between gap-3">
                   <FileDocumentLightIcon />
                   <Text className="text-sm font-extrabold dark:text-white">
-                    {convertFileSize(typedTotalSpace.document.size) || "0 Byte"}
+                    {convertFileSize(totalSpace.document.size) || "0 Byte"}
                   </Text>
                 </View>
                 <Text className="text-xl font-bold dark:text-white">
                   Documents
                 </Text>
                 <Text className="font-light dark:text-white">
-                  {formatDateTime(typedTotalSpace.document.latestDate)}
+                  {formatDateTime(totalSpace.document.latestDate)}
                 </Text>
               </View>
             </Link>
@@ -426,14 +407,14 @@ const HomeScreen = () => {
                 <View className="flex justify-between gap-3">
                   <FileImageLightIcon />
                   <Text className="text-sm font-extrabold dark:text-white">
-                    {convertFileSize(typedTotalSpace.image.size) || "0 Byte"}
+                    {convertFileSize(totalSpace.image.size) || "0 Byte"}
                   </Text>
                 </View>
                 <Text className="text-xl font-bold dark:text-white">
                   Images
                 </Text>
                 <Text className="font-light dark:text-white">
-                  {formatDateTime(typedTotalSpace.image.latestDate)}
+                  {formatDateTime(totalSpace.image.latestDate)}
                 </Text>
               </View>
             </Link>
@@ -446,17 +427,16 @@ const HomeScreen = () => {
                   <FileVideoLightIcon />
                   <Text className="text-sm font-extrabold dark:text-white">
                     {convertFileSize(
-                      typedTotalSpace.video.size + typedTotalSpace.audio.size
+                      totalSpace.video.size + totalSpace.audio.size
                     ) || "0 Byte"}
                   </Text>
                 </View>
                 <Text className="text-xl font-bold dark:text-white">Media</Text>
                 <Text className="font-light dark:text-white">
                   {formatDateTime(
-                    typedTotalSpace.video.latestDate >
-                      typedTotalSpace.audio.latestDate
-                      ? typedTotalSpace.video.latestDate
-                      : typedTotalSpace.audio.latestDate
+                    totalSpace.video.latestDate > totalSpace.audio.latestDate
+                      ? totalSpace.video.latestDate
+                      : totalSpace.audio.latestDate
                   )}
                 </Text>
               </View>
@@ -469,14 +449,14 @@ const HomeScreen = () => {
                 <View className="flex justify-between gap-3">
                   <FileOtherLightIcon />
                   <Text className="text-sm font-extrabold dark:text-white">
-                    {convertFileSize(typedTotalSpace.other.size) || "0 Byte"}
+                    {convertFileSize(totalSpace.other.size) || "0 Byte"}
                   </Text>
                 </View>
                 <Text className="text-xl font-bold dark:text-white">
                   Others
                 </Text>
                 <Text className="font-light dark:text-white">
-                  {formatDateTime(typedTotalSpace.other.latestDate)}
+                  {formatDateTime(totalSpace.other.latestDate)}
                 </Text>
               </View>
             </Link>
